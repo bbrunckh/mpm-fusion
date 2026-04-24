@@ -6,8 +6,6 @@
 if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
 renv::restore()
 
-t_start <- proc.time()
-
 # Set root path (change this line for your machine)
 root <- here::here()
 
@@ -43,6 +41,3 @@ analysis_path <- file.path(root, "code", "analysis")
 
   # Compare rank correlations (numbers quoted in text)
   source(file.path(analysis_path, "06_compare_rank_correlations.R"))
-
-t_elapsed <- proc.time() - t_start
-message(sprintf("Total runtime: %.1f minutes", t_elapsed["elapsed"] / 60))
