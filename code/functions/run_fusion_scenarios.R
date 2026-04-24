@@ -1,87 +1,110 @@
-run_fusion_scenarios <- function(data, metric_fns, scenarios, sim_bias, groups, prob_col_name = "pop_sh") {
+#' Run fusion scenarios over multiple data sources and bias factors
+#'
+#' Loops over all scenarios and simulated bias levels, fuses indicator data
+#' across data sources using conditional independence, and computes MPM bounds.
+#'
+#' @param data Data frame with the full survey microdata including deprivation indicators.
+#' @param metric_fns Named list of functions defining poverty metrics (passed to \code{mpm_bounds}).
+#' @param scenarios data.table from \code{define_scenarios()} with columns: scenario, data_source, ind_list.
+#' @param sim_bias Numeric vector of simulated bias multipliers (1 = no bias).
+#' @param groups Character vector of grouping column names.
+#' @param prob_col_name Name of the population share column (default = "pop_sh").
+#'
+#' @return data.table with columns: [groups], mpm, pop_sh, lower_bound, upper_bound, status, pop_sh_valid, scenario, sim_bias.
+run_fusion_scenarios <- function(data, metric_fns, scenarios, sim_bias, groups,
+                                  prob_col_name = "pop_sh") {
 
-  fused_all <- NULL
+  data <- as.data.table(data)
+  level_cols <- c("code", "year", "survname", "level")
 
-  # loop over validation scenarios
-  for (s in unique(scenarios$scenario)) {
+  scenario_names <- unique(scenarios$scenario)
+
+  results_by_scenario <- lapply(scenario_names, function(s) {
     message(paste0("Scenario: ", s))
 
-    # split validation data into scenario data sets
-    scen <- scenarios |> filter(scenario == s)
+    scen <- scenarios[scenario == s]
 
-    # loop over data sources to construct df_list
+    # build df_list — one grouped dataset per data source
     df_list_nobias <- list()
 
     for (n in unique(scen$data_source)) {
-
-      ind_list <- scen |>
-        filter(data_source == n) |>
-        pull(ind_list) |>
-        unlist()
-
-      df <- data |>
-        group_by(pick(all_of(c(groups, ind_list)))) |>
-        summarise(!!prob_col_name := sum(.data[[prob_col_name]]), .groups = "drop")
-
+      ind_list <- unlist(scen[data_source == n, ind_list])
+      by_cols  <- c(groups, ind_list)
+      df <- data[, setNames(list(sum(get(prob_col_name))), prob_col_name), by = by_cols]
       df_list_nobias[[n]] <- df
     }
 
+    results_list <- list()
+
     # loop over simulated sample bias scenarios
     for (sb in unique(sim_bias)) {
-      message(paste0("Simulated bias: ", sb))
+      message(paste0("  Simulated bias: ", sb))
 
       df_list <- df_list_nobias
 
       # add simulated bias to secondary data sets
       if (sb != 1) {
         for (n in 2:length(df_list)) {
-          df_list[[n]] <- df_list[[n]] |>
-            mutate(n_dep = rowSums(across(starts_with("dep_")), na.rm = TRUE),
-                   !!prob_col_name := if_else(n_dep > 0,
-                                             .data[[prob_col_name]] * sb,
-                                             .data[[prob_col_name]])) |>
-            group_by(pick(all_of(c(groups)))) |>
-            mutate(!!prob_col_name := if_else(n_dep == 0,
-                                             .data[[prob_col_name]] + (1 - sum(.data[[prob_col_name]])),
-                                             .data[[prob_col_name]])) |>
-            group_by(code, year, survname, level) |>
-            filter( # remove level if any bias adjusted pop_sh is outside [0,1]
-              all(round(.data[[prob_col_name]], 3) >= 0 & round(.data[[prob_col_name]], 3) <= 1)) |>
-            ungroup() |>
-            select(-n_dep)
+          dt <- copy(df_list[[n]])
+          dep_cols <- grep("^dep_", names(dt), value = TRUE)
+
+          # count deprivations per row
+          dt[, n_dep := rowSums(.SD, na.rm = TRUE), .SDcols = dep_cols]
+
+          # scale up deprived rows
+          dt[n_dep > 0, (prob_col_name) := get(prob_col_name) * sb]
+
+          # renormalize non-deprived rows so shares sum to 1 within groups
+          dt[, (prob_col_name) := fifelse(
+            n_dep == 0,
+            get(prob_col_name) + (1 - sum(get(prob_col_name))),
+            get(prob_col_name)
+          ), by = groups]
+
+          # remove groups where any adjusted share falls outside [0, 1]
+          valid <- dt[, .(keep = all(
+            round(get(prob_col_name), 3) >= 0 & round(get(prob_col_name), 3) <= 1
+          )), by = level_cols]
+          dt <- dt[valid[keep == TRUE, ..level_cols], on = level_cols, nomatch = NULL]
+
+          dt[, n_dep := NULL]
+          df_list[[n]] <- dt
         }
       }
 
-      # filter data sets to keep the same levels for each survey
-      common_levels <- df_list |>
-        map(~ .x |> distinct(code, year, survname, level)) |>
-        reduce(inner_join, by = c("code", "year", "survname", "level"))
+      # filter data sets to the same levels present in all sources
+      common_levels <- Reduce(
+        function(a, b) merge(a, b, by = level_cols, all = FALSE),
+        lapply(df_list, function(x) unique(as.data.table(x)[, ..level_cols]))
+      )
+      df_list <- lapply(df_list, function(x) {
+        as.data.table(x)[common_levels, on = level_cols, nomatch = NULL]
+      })
 
-      df_list <- df_list |>
-        map(~ .x |> semi_join(common_levels,
-                              by = c("code", "year", "survname", "level")))
-
-      # if no data remains after filtering, move to next scenario
-      if (all(map_lgl(df_list, ~ nrow(.x) == 0))) next
+      # skip if no data remains
+      if (all(sapply(df_list, function(x) nrow(x) == 0L))) next
 
       # fuse indicators across data sets, calculate FH bounds
       fused <- fuse_indicators(df_list = df_list, prob_col_name = prob_col_name)
 
       # compute predicted (fusion) mpm and theoretical bounds
-      ind_list <- scen |> pull(ind_list)
+      ind_list <- scen[, ind_list]
 
       fused_result <- mpm_bounds(
-        fused_dt = fused,
-        mpm_fns = metric_fns,
-        ind_list = ind_list,
-        group_vars = groups,
+        fused_dt      = fused,
+        mpm_fns       = metric_fns,
+        ind_list      = ind_list,
+        group_vars    = groups,
         prob_col_name = prob_col_name
       )
 
-      # accumulate results
-      fused_all <- bind_rows(fused_all, mutate(fused_result, scenario = s, sim_bias = sb))
+      fused_result_dt <- as.data.table(fused_result)
+      fused_result_dt[, `:=`(scenario = s, sim_bias = sb)]
+      results_list[[length(results_list) + 1L]] <- fused_result_dt
     }
-  }
 
-  return(fused_all)
+    results_list
+  })
+
+  rbindlist(unlist(results_by_scenario, recursive = FALSE))
 }

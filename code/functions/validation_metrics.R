@@ -1,7 +1,3 @@
-# If needed:
-# install.packages("data.table")
-library(data.table)
-
 #' Compute prediction metrics for multiple targets by group
 #'
 #' @param data A data.frame or data.table with actual, predicted, and grouping columns.

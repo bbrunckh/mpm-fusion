@@ -1,7 +1,4 @@
-library(highs)
-library(data.table)
-
-#' Estimate multidimensional poverty metrics and bounds after fusing data (OPTIMIZED)
+#' Estimate multidimensional poverty metrics and bounds after fusing data
 #'
 #' Estimates user-defined multidimensional poverty metrics and finds the 
 #' theoretical minimum and maximum values by solving Linear Programming problems
@@ -16,7 +13,7 @@ library(data.table)
 #'
 #' @return Data.table with estimates and bounds for each MPM
 
-mpm_bounds <- function(fused_dt, mpm_fns, ind_list, group_vars = NULL, 
+mpm_bounds <- function(fused_dt, mpm_fns, ind_list, group_vars = NULL,
                        prob_col_name = "prob", solver = "choose") {
   
   # Setup
@@ -70,26 +67,34 @@ mpm_bounds <- function(fused_dt, mpm_fns, ind_list, group_vars = NULL,
   upper_vec <- fused_dt[[upper_col]]
   group_vec <- fused_dt$.group_id
   
-  # Build constraint matrix ONCE per group (reuse for all MPMs)
+  # Build sparse constraint matrix ONCE per group (reuse for all MPMs)
   # This is the key optimization since constraints don't depend on MPM
-  build_constraints_optimized <- function(group_idx, prob_vals) {
+  build_constraints_sparse <- function(group_idx, prob_vals) {
     n_valid <- length(group_idx)
-    if (n_valid == 0) return(list(A = matrix(0, nrow = 1, ncol = 0), lhs = 1, rhs = 1))
-    
+    if (n_valid == 0) {
+      return(list(
+        A = Matrix::sparseMatrix(i = integer(0), j = integer(0), x = numeric(0),
+                                 dims = c(1L, 0L)),
+        lhs = 1, rhs = 1
+      ))
+    }
+
     total_valid_prob <- sum(prob_vals)
-    
-    # Pre-allocate with better initial size estimate
-    n_datasets <- length(ind_list)
-    est_rows <- 1 + n_datasets * 20  # rough estimate
-    A_list <- vector("list", est_rows)
-    lhs <- rhs <- numeric(est_rows)
-    count <- 0
-    
+
+    # Collect sparse triplets (row, col, value) for constraint matrix
+    sp_i <- integer(0)
+    sp_j <- integer(0)
+    lhs_vec <- numeric(0)
+    rhs_vec <- numeric(0)
+    count <- 0L
+
     # Constraint: probabilities sum to 1
-    count <- count + 1
-    A_list[[count]] <- rep(1, n_valid)
-    lhs[count] <- rhs[count] <- 1
-    
+    count <- count + 1L
+    sp_i <- c(sp_i, rep(count, n_valid))
+    sp_j <- c(sp_j, seq_len(n_valid))
+    lhs_vec <- c(lhs_vec, 1)
+    rhs_vec <- c(rhs_vec, 1)
+
     # Pre-extract group data columns once
     group_data <- vector("list", length(ind_list))
     for (d in seq_along(ind_list)) {
@@ -97,52 +102,46 @@ mpm_bounds <- function(fused_dt, mpm_fns, ind_list, group_vars = NULL,
         group_data[[d]] <- lapply(ind_list[[d]], function(col) fused_dt[[col]][group_idx])
       }
     }
-    
+
     # Marginal constraints - optimized matching
     for (d in seq_along(ind_list)) {
       dataset_vars <- ind_list[[d]]
       if (length(dataset_vars) == 0) next
-      
+
       # Use data.table for fast unique combinations
       combo_dt <- as.data.table(group_data[[d]])
       setnames(combo_dt, dataset_vars)
       combos <- unique(combo_dt)
-      
+
       for (i in seq_len(nrow(combos))) {
-        # Vectorized matching (much faster than Reduce)
+        # Vectorized matching
         match_vec <- rep(TRUE, n_valid)
         for (v in dataset_vars) {
           match_vec <- match_vec & (combo_dt[[v]] == combos[[v]][i])
         }
         match_idx <- which(match_vec)
-        
+
         if (length(match_idx) == 0) next
-        
-        count <- count + 1
-        if (count > length(A_list)) {
-          # Grow arrays
-          new_size <- length(A_list) * 2
-          A_list <- c(A_list, vector("list", new_size - length(A_list)))
-          lhs <- c(lhs, numeric(new_size - length(lhs)))
-          rhs <- c(rhs, numeric(new_size - length(rhs)))
-        }
-        
-        constraint_row <- numeric(n_valid)
-        constraint_row[match_idx] <- 1
+
+        count <- count + 1L
+        sp_i <- c(sp_i, rep(count, length(match_idx)))
+        sp_j <- c(sp_j, match_idx)
+
         target_prob_renorm <- sum(prob_vals[match_idx]) / total_valid_prob
-        
-        A_list[[count]] <- constraint_row
-        lhs[count] <- rhs[count] <- target_prob_renorm
+        lhs_vec <- c(lhs_vec, target_prob_renorm)
+        rhs_vec <- c(rhs_vec, target_prob_renorm)
       }
     }
-    
-    list(
-      A = do.call(rbind, A_list[1:count]), 
-      lhs = lhs[1:count], 
-      rhs = rhs[1:count]
+
+    # Build sparse column-compressed matrix (dgCMatrix) — native HiGHS input
+    A <- Matrix::sparseMatrix(
+      i = sp_i, j = sp_j, x = 1,
+      dims = c(count, n_valid)
     )
+
+    list(A = A, lhs = lhs_vec, rhs = rhs_vec)
   }
-  
+
   # Process all groups and MPMs
   groups <- sort(unique(group_vec))
   n_groups <- length(groups)
@@ -213,7 +212,7 @@ mpm_bounds <- function(fused_dt, mpm_fns, ind_list, group_vars = NULL,
         }
         
         constraint_cache[[na_sig]] <- list(
-          constraints = build_constraints_optimized(valid_idx, prob_vals[valid_mask]),
+          constraints = build_constraints_sparse(valid_idx, prob_vals[valid_mask]),
           lower_bounds = lower_bounds,
           upper_bounds = upper_bounds
         )
@@ -227,7 +226,7 @@ mpm_bounds <- function(fused_dt, mpm_fns, ind_list, group_vars = NULL,
       
       L <- L_full[valid_mask]
       
-      # Solve min and max (suppress HiGHS warnings about tight bounds)
+      # Solve min and max
       min_sol <- suppressWarnings(highs_solve(
         L = L,
         lower = lower_bounds,
@@ -235,10 +234,10 @@ mpm_bounds <- function(fused_dt, mpm_fns, ind_list, group_vars = NULL,
         A = constraints$A,
         lhs = constraints$lhs,
         rhs = constraints$rhs,
-        maximum = FALSE, 
+        maximum = FALSE,
         control = list(solver = solver)
       ))
-      
+
       max_sol <- suppressWarnings(highs_solve(
         L = L,
         lower = lower_bounds,
@@ -246,7 +245,7 @@ mpm_bounds <- function(fused_dt, mpm_fns, ind_list, group_vars = NULL,
         A = constraints$A,
         lhs = constraints$lhs,
         rhs = constraints$rhs,
-        maximum = TRUE, 
+        maximum = TRUE,
         control = list(solver = solver)
       ))
       

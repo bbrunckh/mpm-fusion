@@ -1,28 +1,19 @@
-# Ensure necessary libraries are loaded
-library(data.table) 
 #' Fuse Indicators and Calculate Bounds using data.table
 #'
-#' Sequentially fuses a probability distributions using  data.table syntax.
+#' Sequentially fuses probability distributions using data.table syntax.
 #'
 #' @param df_list A list of dataframes or data.tables.
-#' @param vars_to_keep A character vector of column names for the final output.
 #' @param prob_col_name A string for the name of the probability column.
 #'
 #' @return A single datatable with the fused distribution and its bounds.
 
-fuse_indicators <- function(df_list, vars_to_keep = NULL, prob_col_name = "prob") {
-  
+fuse_indicators <- function(df_list, prob_col_name = "prob") {
+
   # --- 1. Input Validation ---
-  
+
   # Ensure df_list is a list with at least two dataframes to fuse.
   if (!is.list(df_list) || length(df_list) < 2) {
     stop("df_list must be a list containing at least two dataframes.")
-  }
-  
-  # If vars_to_keep is not provided, automatically determine them by finding all
-  # unique column names across all dataframes, excluding the probability column.
-  if (is.null(vars_to_keep)) {
-    vars_to_keep <- setdiff(unique(unlist(lapply(df_list, names))), prob_col_name)
   }
   
   # --- 2. Initialization ---
@@ -58,16 +49,15 @@ fuse_indicators <- function(df_list, vars_to_keep = NULL, prob_col_name = "prob"
     common_vars <- setdiff(common_vars, c("prob", "lower_prob", "upper_prob", "p2"))
     if (length(common_vars) == 0) stop("No common variables found for fusion.")
     
-    # Calculate P(Y|X_c) for the independence calculation
+    # Compute P(Y|X_c) from the incoming dataset
     next_dt[, p2_cond := p2 / sum(p2, na.rm = TRUE), by = common_vars]
-    
-    # 2. Use the marginal probability of common variables from first/fused data
+
+    # Compute P(X_c) from the fused dataset
     fused_dt[, prob_common := sum(prob, na.rm = TRUE), by = common_vars]
-    
-    # 3. Perform the merge, first calculate probability of common vars
+
     fused_dt <- merge(fused_dt, next_dt, by = common_vars, all.x = TRUE, allow.cartesian = TRUE)
-    
-    # 4. Update Joint Probability and Bounds
+
+    # Update joint probability (conditional independence) and FH bounds
     fused_dt[, `:=`(
       # Lower Bound = max(P(X) + P(X_c)*P(Y|X_c) - P(X_c))
       lower_prob = pmax(0, lower_prob + prob_common*p2_cond - prob_common),
@@ -82,23 +72,10 @@ fuse_indicators <- function(df_list, vars_to_keep = NULL, prob_col_name = "prob"
     )]
   }
   
-  # --- 4. Marginalization and Final Output ---
-  
-  # Group by the 'vars_to_keep' and sum the probabilities and bounds to get the final marginalized distribution.
-  final_dt <- fused_dt[, .(
-    prob = sum(prob, na.rm = TRUE),
-    lower_prob = sum(lower_prob, na.rm = TRUE),
-    upper_prob = sum(upper_prob, na.rm = TRUE)
-  ), by = vars_to_keep]
-  
-  # --- 5. Rename Final Columns ---
-  
-  # Create the new names for the output columns.
+  # --- 4. Rename and Return ---
+
   new_names <- c(prob_col_name, paste0(prob_col_name, "_lower"), paste0(prob_col_name, "_upper"))
-  
-  # Rename the columns in the final data.table.
-  setnames(final_dt, c("prob", "lower_prob", "upper_prob"), new_names)
-  
-  # Return the result
-  return(final_dt)
+  setnames(fused_dt, c("prob", "lower_prob", "upper_prob"), new_names)
+
+  return(fused_dt)
 }

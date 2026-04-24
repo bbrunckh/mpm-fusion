@@ -1,6 +1,4 @@
-library(data.table)
-
-#' Compute multidimensional poverty point estimates (OPTIMIZED)
+#' Compute multidimensional poverty point estimates
 #'
 #' Computes user-defined multidimensional poverty metrics as probability-weighted
 #' averages, renormalizing over valid (non-NA) indicator rows within each group.
