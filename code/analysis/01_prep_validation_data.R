@@ -7,10 +7,11 @@
 # load raw distribution
 gmd_data <- haven::read_dta(here("data/Survey_mpm_groups_true.dta"))
 
-# get WDI population
-wdi_pop <- as.data.table(wbstats::wb_data("SP.POP.TOTL"))
-setnames(wdi_pop, c("iso3c", "date", "SP.POP.TOTL"), c("code", "year", "pop"))
-wdi_pop <- wdi_pop[, .(code, year, pop)]
+# get World Bank population from pipr package
+pip_pop <- pipr::get_aux("pop")
+setDT(pip_pop)
+setnames(pip_pop, c("country_code", "value"), c("code", "pop"))
+pip_pop <- pip_pop[data_level == "national", .(code, year = as.numeric(as.character(year)), pop)]
 
 # clean variables 
 gmd_data_clean <- as.data.table(gmd_data)
@@ -37,8 +38,8 @@ dep_cols <- grep("^dep_", names(gmd_data_clean), value = TRUE)
 gmd_data_clean[, (dep_cols) := lapply(.SD, function(x) fifelse(x == -1, NA_real_, x)),
                .SDcols = dep_cols]
 
-# add WDI population (use this instead of totalind)
-gmd_data_clean <- merge(gmd_data_clean, wdi_pop, by = c("code", "year"), all.x = TRUE)
+# add PIP population (use this instead of totalind)
+gmd_data_clean <- merge(gmd_data_clean, pip_pop, by = c("code", "year"), all.x = TRUE)
 
 # add population and population share of sample
 gmd_data_clean[, `:=`(

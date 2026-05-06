@@ -39,5 +39,8 @@ analysis_path <- file.path(root, "code", "analysis")
   source(file.path(analysis_path, "04_inf_fusion.R"))
   source(file.path(analysis_path, "05_inf_fusion_results.R"))
 
-  # Compare rank correlations (numbers quoted in text)
+  # Compare rank correlations (annex)
   source(file.path(analysis_path, "06_compare_rank_correlations.R"))
+
+  # Distribution of surveys by region and decade (annex)
+  source(file.path(analysis_path, "07_survey_distribution.R"))

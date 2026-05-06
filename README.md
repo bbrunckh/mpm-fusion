@@ -18,12 +18,12 @@ Some data cannot be made publicly available.
   - **Access year:** 2025
   - **Access:** Restricted
 
-- **Filename:** WDI population data (accessed programmatically)
-  - **Source:** World Development Indicators
-  - **URL:** https://data.worldbank.org/indicator/SP.POP.TOTL
+- **Filename:** World Bank population data (accessed programmatically)
+  - **Source:** PIP
+  - **URL:** 
   - **Access year:** 2026
   - **License:** Creative Commons Attribution 4.0 International license (CC-BY 4.0)
-  - **Access:** Accessed via the `wbstats` R package
+  - **Access:** Accessed via the `pipr` R package
 
 The authors of the manuscript have legitimate access to and permission to use the data used in this manuscript.
 
@@ -68,7 +68,7 @@ The provided code reproduces all tables and figures in the paper.
   - Platform: aarch64-apple-darwin20
   - Earlier versions of R can be used
   - All package versions are managed via `renv`. 
-  - Key R packages: `data.table`, `ggplot2`, `haven`, `here`, `highs`, `Matrix`, `nanoparquet`, `openxlsx`, `wbstats`, `Hmisc`, `renv`, `scales`, `stringr`
+  - Key R packages: `data.table`, `ggplot2`, `haven`, `here`, `highs`, `Matrix`, `nanoparquet`, `openxlsx`, `pipr`, `Hmisc`, `renv`, `scales`, `stringr`
 
 ### Operating System
 
@@ -108,7 +108,8 @@ The provided code reproduces all tables and figures in the paper.
 | `03_mpm_fusion_results.R` | Exports MPM summary/extended tables (Excel) and figures (heatplots, lineplots, scatterplots, errorplots) |
 | `04_inf_fusion.R` | Mirrors `02_mpm_fusion.R` for infrastructure indicators (electricity, water, sanitation); includes validation metrics |
 | `05_inf_fusion_results.R` | Exports infrastructure tables and figures |
-| `06_compare_rank_correlations.R` | Standalone/exploratory script comparing rank correlations across fusion approaches; not part of the main pipeline |
+| `06_compare_rank_correlations.R` | Generates table comparing rank correlations |
+| `07_validation_data.R` | Generates table summarizing validation data by region and decade |
 
 ---
 
@@ -139,7 +140,8 @@ mpm-fusion/
 │       ├── 03_mpm_fusion_results.R
 │       ├── 04_inf_fusion.R
 │       ├── 05_inf_fusion_results.R
-│       └── 06_compare_rank_correlations.R  (standalone, not in pipeline)
+│       ├── 06_compare_rank_correlations.R  
+│       └── 07_validation_data.R
 └── output/
     ├── tables/                    # Excel output tables
     └── figures/
@@ -157,8 +159,6 @@ Barrett T, Dowle M, Srinivasan A, Gorecki J, Chirico M, Hocking T, Schwendinger 
 Hahsler M, Piekenbrock M, Doran D (2019). dbscan: Fast Density-Based Clustering with R. *Journal of Statistical Software*, 91(1), 1–30. doi:10.18637/jss.v091.i01.
 
 Huangfu Q, Hall JAJ (2018). Parallelizing the dual revised simplex method. *Mathematical Programming Computation*, 10(1), 119–142. doi:10.1007/s12532-017-0130-5.
-
-Piburn J (2020). *wbstats: Programmatic Access to the World Bank API*. R package version 1.1. Oak Ridge National Laboratory. doi:10.11578/dc.20171025.1827.
 
 R Core Team (2026). *R: A Language and Environment for Statistical Computing*. R Foundation for Statistical Computing, Vienna, Austria. URL https://www.R-project.org/.
 

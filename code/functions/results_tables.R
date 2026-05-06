@@ -132,6 +132,18 @@ create_extended_workbook <- function(dt_bias1, output_path) {
   mpms        <- unique(dt_bias1$mpm)
   metric_cols <- c("bias", "mae", "mape", "mse", "rmse", "r", "rho", "mpiw")
 
+  metric_labels <- c(
+    bias = "Bias", mae = "MAE", mape = "MAPE", mse = "MSE",
+    rmse = "RMSE", r = "r", rho = "\u03c1", mpiw = "MPIW"
+  )
+
+  # styles for metric headers
+  header_style <- createStyle(textDecoration = "bold", halign = "center", valign = "center",
+                              border = "TopBottomLeftRight", borderStyle = "thin")
+  r_header_style <- createStyle(textDecoration = c("bold", "italic"), halign = "center",
+                                valign = "center", border = "TopBottomLeftRight",
+                                borderStyle = "thin")
+
   for (mpm_val in mpms) {
     dt_mpm  <- dt_bias1[mpm == mpm_val]
     targets <- unique(dt_mpm$target)
@@ -199,7 +211,7 @@ create_extended_workbook <- function(dt_bias1, output_path) {
 
       for (j in seq_along(metric_cols)) {
         metric_col <- target_start_col + j - 1
-        writeData(wb_extended, sheet_name, metric_cols[j], startCol = metric_col, startRow = 2)
+        writeData(wb_extended, sheet_name, metric_labels[metric_cols[j]], startCol = metric_col, startRow = 2)
       }
     }
 
@@ -233,10 +245,15 @@ create_extended_workbook <- function(dt_bias1, output_path) {
       }
     }
 
-    header_style <- createStyle(textDecoration = "bold", halign = "center", valign = "center",
-                                border = "TopBottomLeftRight", borderStyle = "thin")
     addStyle(wb_extended, sheet_name, header_style, rows = 1:2, cols = 1:n_col_idx,
              gridExpand = TRUE, stack = TRUE)
+
+    # re-apply italic style to all "r" header cells (one per target)
+    for (i in seq_along(targets)) {
+      r_col_position <- start_col + (i - 1) * length(metric_cols) + which(metric_cols == "r") - 1
+      addStyle(wb_extended, sheet_name, r_header_style,
+               rows = 2, cols = r_col_position, stack = FALSE)
+    }
 
     for (i in seq_along(targets)) {
       target_start_col <- start_col + (i - 1) * length(metric_cols)
