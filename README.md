@@ -47,7 +47,7 @@ The authors of the manuscript have legitimate access to and permission to use th
 The provided code reproduces all tables and figures in the paper containing results from the analysis. In order of appearance:
 
 | Exhibit name | Output filename | Script | 
-|---|---|---|---|
+|---|---|---|
 | Table 4 | `output/tables/mpm_summary_tables.xlsx` | `code/analysis/03_mpm_fusion_results.R` |
 | Figure 8 | `output/figures/MPM/heatplot_mpm_mae.png` | `code/analysis/03_mpm_fusion_results.R` |
 | Figure 9 | `output/figures/MPM/lineplot_mae_samplebias_national.png` | `code/analysis/03_mpm_fusion_results.R` |
