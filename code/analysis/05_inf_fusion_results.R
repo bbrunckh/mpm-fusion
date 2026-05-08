@@ -81,7 +81,7 @@ mpm_colors <- c(
 # HEATPLOT 1: Scenarios x Data_level for each metric and mpm
 # ============================================================================
 
-mpms        <- unique(dt_bias1$mpm)
+mpms        <- c("At least 1")
 metric_cols <- c("mae")
 
 dt_bias1[, data_level := factor(data_level, levels = rev(level_list))]
@@ -115,72 +115,6 @@ for (mpm_val in mpms) {
 }
 
 # ============================================================================
-# HEATPLOT 2: Sim_bias x Scenario for each metric and mpm (National only)
-# ============================================================================
-
-dt_national <- dt_val[data_level == "National"]
-mpms        <- unique(dt_national$mpm)
-metric_cols <- c("mae")
-
-dt_national[, scenario   := factor(scenario,   levels = rev(s_list))]
-dt_national[, data_level := factor(data_level, levels = rev(level_list))]
-dt_national[, target     := factor(target, levels = c("Corrected (local)", "Corrected (global)", "Fused estimate"))]
-
-for (mpm_val in mpms) {
-  for (metric in metric_cols) {
-    dt_plot <- dt_national[mpm == mpm_val]
-    max <- max(dt_plot[[metric]], na.rm = TRUE)
-
-    p <- ggplot(dt_plot, aes(x = as.factor(sim_bias), y = scenario, fill = .data[[metric]])) +
-      geom_tile(color = "white", linewidth = 0.5) +
-      geom_text(aes(label = round(.data[[metric]], 2)), size = 5, color = "black") +
-      facet_wrap(~ target, ncol = 1, dir = "br", axes = "all_x") +
-      scale_fill_gradient2(low = "#0072B2", mid = "#f7f7f7", high = "#b2182b",
-                           midpoint = median(dt_plot[[metric]], na.rm = TRUE),
-                           limits = c(0, max)) +
-      theme_minimal(base_size = 16) +
-      labs(x = "Simulated bias", y = "", fill = toupper(metric)) +
-      theme(
-        axis.text    = element_text(size = 16),
-        axis.title   = element_text(size = 16),
-        legend.title = element_text(size = 16),
-        legend.text  = element_text(size = 16),
-        strip.text   = element_text(size = 16)
-      )
-
-    ggsave(here("output", paste0("figures/INF/heatplot_", mpm_val, "_", metric, "_samplebias.png")),
-           p, width = 12, height = 8, dpi = 300)
-  }
-}
-
-# ============================================================================
-# LINEPLOT 1: Scenarios x MAE, one line per target
-# ============================================================================
-
-dt_bias1[, data_level := factor(data_level, levels = level_list)]
-dt_bias1[, target     := factor(target, levels = c("Fused estimate", "Corrected (global)", "Corrected (local)"))]
-
-p1 <- ggplot(dt_bias1, aes(x = scenario, y = mae, color = target, group = target)) +
-  geom_line(linewidth = 1.5) +
-  geom_point(size = 2) +
-  facet_grid(data_level ~ mpm, scales = "free_y") +
-  scale_color_manual(values = target_colors) +
-  theme_minimal(base_size = 20) +
-  theme(axis.text.x    = element_text(angle = 45, hjust = 1, size = 20),
-        axis.text.y    = element_text(size = 20),
-        axis.title.x   = element_text(size = 20),
-        axis.title.y   = element_text(size = 20),
-        strip.text.x   = element_text(size = 20),
-        strip.text.y   = element_text(size = 20),
-        legend.position = "bottom",
-        legend.text    = element_text(size = 20),
-        plot.title     = element_text(hjust = 0.5)) +
-  labs(x = "Scenario", y = "MAE", color = "")
-
-ggsave(here("output/figures/INF/lineplot_mae_scenarios.png"),
-       p1, width = 16, height = 12, dpi = 300)
-
-# ============================================================================
 # LINEPLOT 2: Sim_bias x MAE, one line per scenario
 # ============================================================================
 
@@ -207,30 +141,6 @@ p2 <- ggplot(dt_plot, aes(x = sim_bias, y = mae, color = scenario, group = scena
 
 ggsave(here("output/figures/INF/lineplot_mae_samplebias_national.png"),
        p2, width = 16, height = 12, dpi = 300)
-
-# ============================================================================
-# INTERVAL WIDTH COMPARISON: MPIW across targets
-# ============================================================================
-
-for (mpm_val in mpms) {
-  dt_plot <- dt_bias1[mpm == mpm_val]
-  available_scenarios_mpm <- unique(dt_plot$scenario)
-  scenario_colors_mpm <- scenario_colors[names(scenario_colors) %in% available_scenarios_mpm]
-
-  p <- ggplot(dt_plot, aes(x = target, y = mpiw, fill = scenario)) +
-    geom_col(position = "dodge") +
-    facet_wrap(~ data_level, scales = "free_y") +
-    scale_fill_manual(values = scenario_colors_mpm) +
-    theme_minimal(base_size = 20) +
-    theme(legend.position = "bottom",
-          plot.title = element_text(hjust = 0.5)) +
-    labs(x = "", y = "Mean Prediction Interval Width", fill = "Scenario") +
-    guides(fill = guide_legend(nrow = 1))
-
-  ggsave(here("output", paste0("figures/INF/mpiw_comparison_combined_",
-                               gsub("[^A-Za-z0-9]", "_", mpm_val), ".png")),
-         p, width = 14, height = 10, dpi = 300)
-}
 
 # ============================================================================
 # PART 2: FUSED INF RESULTS VISUALIZATIONS
@@ -264,8 +174,7 @@ dt_fused_bias1 <- dt_fused[sim_bias == 1]
 # Get unique combinations
 mpms_fused   <- unique(dt_fused_bias1$mpm)
 levels_fused <- unique(dt_fused_bias1$level)
-estimates    <- c("pop_sh", "pred_p50_global", "pred_p50_local")
-estimate_colors <- target_colors
+estimates    <- c("pop_sh", "pred_p50_local")
 
 # ============================================================================
 # SCATTERPLOT 1: Estimate vs True by Scenario
@@ -303,9 +212,9 @@ for (est in estimates) {
 # SCATTERPLOT with bounds: Error vs True with Prediction Intervals
 # ============================================================================
 
-for (mpm_val in mpms_fused) {
-  for (scenario_val in unique(dt_fused_bias1$scenario)) {
-    for (level_val in c("National", "Subnational")) {
+for (mpm_val in c("At least 1")) {
+  for (scenario_val in c("ew-ws")) {
+    for (level_val in c("Subnational")) {
 
       dt_plot <- dt_fused_bias1[mpm == mpm_val & scenario == scenario_val & level == level_val]
 

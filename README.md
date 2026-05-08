@@ -72,11 +72,11 @@ The provided code reproduces all tables and figures in the paper.
 
 ### Operating System
 
-- Run on macOS 26.4.1
+- Run on macOS 26.4.1 (M2 chip, 16GB memory)
 
 ### Runtime
 
-- ~ 3 hours (macOS 26.4.1, M2 chip, 16GB memory)
+- 245 minutes
 
 ### Storage
 

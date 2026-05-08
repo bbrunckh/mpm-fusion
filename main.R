@@ -4,9 +4,9 @@
 
 # Restore R environment
 if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
-renv::restore()
+renv::restore(prompt = FALSE)
 
-# Set root path (change this line for your machine)
+# Set root path (change this line for your machine if needed)
 root <- here::here()
 
 # Source all function definitions
@@ -31,16 +31,16 @@ analysis_path <- file.path(root, "code", "analysis")
   # Prep validation data
   source(file.path(analysis_path, "01_prep_validation_data.R"))
 
-  # MPM fusion (main text)
+  # MPM fusion 
   source(file.path(analysis_path, "02_mpm_fusion.R"))
   source(file.path(analysis_path, "03_mpm_fusion_results.R"))
 
-  # Infrastructure fusion (annex)
+  # Infrastructure fusion 
   source(file.path(analysis_path, "04_inf_fusion.R"))
   source(file.path(analysis_path, "05_inf_fusion_results.R"))
 
-  # Compare rank correlations (annex)
+  # Compare rank correlations
   source(file.path(analysis_path, "06_compare_rank_correlations.R"))
 
-  # Distribution of surveys by region and decade (annex)
-  source(file.path(analysis_path, "07_survey_distribution.R"))
+  # Validation data surveys by region and decade 
+  source(file.path(analysis_path, "07_validation_data.R"))

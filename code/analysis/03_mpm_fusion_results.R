@@ -84,7 +84,7 @@ mpm_colors <- c(
 # HEATPLOT 1: Scenarios x Data_level for each metric and mpm
 # ============================================================================
 
-mpms        <- unique(dt_bias1$mpm)
+mpms        <- c("MPM")
 metric_cols <- c("mae")
 
 dt_bias1[, data_level := factor(data_level, levels = rev(level_list))]
@@ -113,45 +113,6 @@ for (mpm_val in mpms) {
       )
 
     ggsave(here("output", paste0("figures/MPM/heatplot_", mpm_val, "_", metric, ".png")),
-           p, width = 12, height = 8, dpi = 300)
-  }
-}
-
-# ============================================================================
-# HEATPLOT 2: Sim_bias x Scenario for each metric and mpm (National only)
-# ============================================================================
-
-dt_national <- dt_val[data_level == "National"]
-mpms        <- unique(dt_national$mpm)
-metric_cols <- c("mae")
-
-dt_national[, scenario   := factor(scenario,   levels = rev(s_list))]
-dt_national[, data_level := factor(data_level, levels = rev(level_list))]
-dt_national[, target     := factor(target, levels = c("Corrected (local)", "Corrected (global)", "Fused estimate"))]
-
-for (mpm_val in mpms) {
-  for (metric in metric_cols) {
-    dt_plot <- dt_national[mpm == mpm_val]
-    max <- max(dt_plot[[metric]], na.rm = TRUE)
-
-    p <- ggplot(dt_plot, aes(x = as.factor(sim_bias), y = scenario, fill = .data[[metric]])) +
-      geom_tile(color = "white", linewidth = 0.5) +
-      geom_text(aes(label = round(.data[[metric]], 2)), size = 5, color = "black") +
-      facet_wrap(~ target, ncol = 1, dir = "br", axes = "all_x") +
-      scale_fill_gradient2(low = "#0072B2", mid = "#f7f7f7", high = "#b2182b",
-                           midpoint = median(dt_plot[[metric]], na.rm = TRUE),
-                           limits = c(0, max)) +
-      theme_minimal(base_size = 16) +
-      labs(x = "Simulated bias", y = "", fill = toupper(metric)) +
-      theme(
-        axis.text      = element_text(size = 16),
-        axis.title     = element_text(size = 16),
-        legend.title   = element_text(size = 16),
-        legend.text    = element_text(size = 16),
-        strip.text     = element_text(size = 16)
-      )
-
-    ggsave(here("output", paste0("figures/MPM/heatplot_", mpm_val, "_", metric, "_samplebias.png")),
            p, width = 12, height = 8, dpi = 300)
   }
 }
@@ -215,7 +176,7 @@ ggsave(here("output/figures/MPM/lineplot_mae_samplebias_national.png"),
 # INTERVAL WIDTH COMPARISON: MPIW across targets
 # ============================================================================
 
-for (mpm_val in mpms) {
+for (mpm_val in c("MPM")) {
   dt_plot <- dt_bias1[mpm == mpm_val]
   available_scenarios_mpm <- unique(dt_plot$scenario)
   scenario_colors_mpm <- scenario_colors[names(scenario_colors) %in% available_scenarios_mpm]
@@ -269,8 +230,7 @@ dt_fused_bias1 <- dt_fused[sim_bias == 1]
 # Get unique combinations
 mpms_fused    <- unique(dt_fused_bias1$mpm)
 levels_fused  <- unique(dt_fused_bias1$level)
-estimates     <- c("pop_sh", "pred_p50_global", "pred_p50_local")
-estimate_colors <- target_colors
+estimates     <- c("pop_sh", "pred_p50_local")
 
 # ============================================================================
 # SCATTERPLOT 1: Estimate vs True by Scenario
@@ -308,9 +268,9 @@ for (est in estimates) {
 # SCATTERPLOT with bounds: Error vs True with Prediction Intervals
 # ============================================================================
 
-for (mpm_val in mpms_fused) {
-  for (scenario_val in unique(dt_fused_bias1$scenario)) {
-    for (level_val in c("National", "Subnational")) {
+for (mpm_val in c("At least 1")) {
+  for (scenario_val in c("p-c-r-e-w-s", "pcew-rews")) {
+    for (level_val in c("National")) {
 
       dt_plot <- dt_fused_bias1[mpm == mpm_val & scenario == scenario_val & level == level_val]
 
