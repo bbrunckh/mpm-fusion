@@ -25,8 +25,7 @@ Some data cannot be made publicly available.
   - **URL:** https://pip.worldbank.org, https://github.com/worldbank/pipr
   - **Access date:** 7 May 2026
   - **Citation:** World Bank (2026). Poverty and Inequality Platform (version 20260324_2021_01_02_PROD) [data set]. pip.worldbank.org. Accessed on 2026-05-07.
-  Fujs T, Eilertsen A, Shah R, Castañeda RA (2022). *pipr: Client for the PIP API*. R package version 1.4.0. URL https://github.com/worldbank/pipr.
-  - **License:** Creative Commons Attribution 4.0 International license (CC-BY 4.0) [data set], MIT License [R package].
+  - **License:** Creative Commons Attribution 4.0 International license (CC-BY 4.0)
   - **Access instructions:** The data is accessed programmatically using the `pipr` R package in the analysis code.
 
 The authors of the manuscript have legitimate access to and permission to use the data used in this manuscript.
@@ -47,34 +46,34 @@ The authors of the manuscript have legitimate access to and permission to use th
 
 The provided code reproduces all tables and figures in the paper containing results from the analysis. In order of appearance:
 
-| Exhibit name | Output filename | Script | Note |
+| Exhibit name | Output filename | Script | 
 |---|---|---|---|
-| Table 4 | `output/tables/mpm_summary_tables.xlsx` | `code/analysis/03_mpm_fusion_results.R` | |
-| Figure 8 | `output/figures/MPM/heatplot_mpm_mae.png` | `code/analysis/03_mpm_fusion_results.R` | |
-| Figure 9 | `output/figures/MPM/lineplot_mae_samplebias_national.png` | `code/analysis/03_mpm_fusion_results.R` | |
-| Figure 10 | `output/figures/MPM/scatter_all_pop_sh.png` | `code/analysis/03_mpm_fusion_results.R` | |
-| Figure 11 | `output/figures/MPM/scatter_all_p50_local.png` | `code/analysis/03_mpm_fusion_results.R` | |
-| Figure 12 | `output/figures/MPM/errorplot_At_least_1_p_c_r_e_w_s_National.png` | `code/analysis/03_mpm_fusion_results.R` | |
-| Figure 13 | `output/figures/MPM/errorplot_At_least_1_pcew_rews_National.png` | `code/analysis/03_mpm_fusion_results.R` | |
-| Table A1 | `output/tables/validation_data.xlsx` | `code/analysis/07_validation_data.R` | |
-| Table A2 | `output/tables/rank_correlations.xlsx` | `code/analysis/06_compare_rank_correlations.R` | |
-| Table A3 | `output/tables/inf_summary_tables.xlsx` | `code/analysis/05_inf_fusion_results.R` | |
-| Figure A2 | `output/figures/INF/heatplot_inf_mae.png` | `code/analysis/05_inf_fusion_results.R` | |
-| Figure A3 | `output/figures/INF/lineplot_mae_samplebias_national.png` | `code/analysis/05_inf_fusion_results.R` | |
-| Figure A4 | `output/figures/INF/scatter_all_pop_sh.png` | `code/analysis/05_inf_fusion_results.R` | |
-| Figure A5 | `output/figures/INF/scatter_all_p50_local.png` | `code/analysis/05_inf_fusion_results.R` | |
-| Figure A6 | `output/figures/INF/errorplot_At_least_1_ew_ws_Subnational.png` | `code/analysis/05_inf_fusion_results.R` | |
-| Figure A7 | `output/figures/MPM/mpiw_comparison_combined_MPM.png` | `code/analysis/03_mpm_fusion_results.R` | |
-| Figure A8 | `output/figures/MPM/lineplot_mae_scenarios.png` | `code/analysis/03_mpm_fusion_results.R` | |
-| Table A4 | `output/tables/inf_extended_tables.xlsx` | `code/analysis/05_inf_fusion_results.R` | sheet = "At_least_1" |
-| Table A5 | `output/tables/inf_extended_tables.xlsx` | `code/analysis/05_inf_fusion_results.R` | sheet = "At_least_2" |
-| Table A6 | `output/tables/inf_extended_tables.xlsx` | `code/analysis/05_inf_fusion_results.R` | sheet = "All_3" |
-| Table A7 | `output/tables/mpm_extended_tables.xlsx` | `code/analysis/03_mpm_fusion_results.R` | sheet = "MPM" |
-| Table A8 | `output/tables/mpm_extended_tables.xlsx` | `code/analysis/03_mpm_fusion_results.R` | sheet = "MPM_AF" |
-| Table A9 | `output/tables/mpm_extended_tables.xlsx` | `code/analysis/03_mpm_fusion_results.R` | sheet = "At_least_1" |
-| Table A10 | `output/tables/mpm_extended_tables.xlsx` | `code/analysis/03_mpm_fusion_results.R` | sheet = "At_least_3" |
+| Table 4 | `output/tables/mpm_summary_tables.xlsx` | `code/analysis/03_mpm_fusion_results.R` |
+| Figure 8 | `output/figures/MPM/heatplot_mpm_mae.png` | `code/analysis/03_mpm_fusion_results.R` |
+| Figure 9 | `output/figures/MPM/lineplot_mae_samplebias_national.png` | `code/analysis/03_mpm_fusion_results.R` |
+| Figure 10 | `output/figures/MPM/scatter_all_pop_sh.png` | `code/analysis/03_mpm_fusion_results.R` |
+| Figure 11 | `output/figures/MPM/scatter_all_p50_local.png` | `code/analysis/03_mpm_fusion_results.R` |
+| Figure 12 | `output/figures/MPM/errorplot_At_least_1_p_c_r_e_w_s_National.png` | `code/analysis/03_mpm_fusion_results.R` |
+| Figure 13 | `output/figures/MPM/errorplot_At_least_1_pcew_rews_National.png` | `code/analysis/03_mpm_fusion_results.R` |
+| Table A1 | `output/tables/validation_data.xlsx` | `code/analysis/07_validation_data.R` |
+| Table A2 | `output/tables/rank_correlations.xlsx` | `code/analysis/06_compare_rank_correlations.R` |
+| Table A3 | `output/tables/inf_summary_tables.xlsx` | `code/analysis/05_inf_fusion_results.R` |
+| Figure A2 | `output/figures/INF/heatplot_inf_mae.png` | `code/analysis/05_inf_fusion_results.R` |
+| Figure A3 | `output/figures/INF/lineplot_mae_samplebias_national.png` | `code/analysis/05_inf_fusion_results.R` |
+| Figure A4 | `output/figures/INF/scatter_all_pop_sh.png` | `code/analysis/05_inf_fusion_results.R` |
+| Figure A5 | `output/figures/INF/scatter_all_p50_local.png` | `code/analysis/05_inf_fusion_results.R` |
+| Figure A6 | `output/figures/INF/errorplot_At_least_1_ew_ws_Subnational.png` | `code/analysis/05_inf_fusion_results.R` |
+| Figure A7 | `output/figures/MPM/mpiw_comparison_combined_MPM.png` | `code/analysis/03_mpm_fusion_results.R` |
+| Figure A8 | `output/figures/MPM/lineplot_mae_scenarios.png` | `code/analysis/03_mpm_fusion_results.R` |
+| Table A4 | `output/tables/inf_extended_tables.xlsx` sheet = "At_least_1" | `code/analysis/05_inf_fusion_results.R` |
+| Table A5 | `output/tables/inf_extended_tables.xlsx` sheet = "At_least_2" | `code/analysis/05_inf_fusion_results.R` |
+| Table A6 | `output/tables/inf_extended_tables.xlsx` sheet = "All_3" | `code/analysis/05_inf_fusion_results.R` |
+| Table A7 | `output/tables/mpm_extended_tables.xlsx` sheet = "MPM" | `code/analysis/03_mpm_fusion_results.R` |
+| Table A8 | `output/tables/mpm_extended_tables.xlsx` sheet = "MPM_AF" | `code/analysis/03_mpm_fusion_results.R` |
+| Table A9 | `output/tables/mpm_extended_tables.xlsx` sheet = "At_least_1" | `code/analysis/03_mpm_fusion_results.R` |
+| Table A10 | `output/tables/mpm_extended_tables.xlsx` sheet = "At_least_3" | `code/analysis/03_mpm_fusion_results.R` |
 
-*Note*: Remaining tables and figures in the manuscript do not present results from the analysis.
+*Note*: Unlisted tables and figures in the manuscript do not present results from the analysis.
 
 ---
 
@@ -103,6 +102,18 @@ The provided code reproduces all tables and figures in the paper containing resu
 
 ## Code Description
 
+### `code/analysis/` — Pipeline scripts (executed in order by `main.R`)
+
+| File | Purpose |
+|---|---|
+| `01_prep_validation_data.R` | Loads GMD survey data, merges population data, computes weights |
+| `02_mpm_fusion.R` | Runs MPM fusion across 7 scenarios × 11 bias factors; saves `fused_mpm.parquet`; computes MAE, MAPE, RMSE, and coverage metrics |
+| `03_mpm_fusion_results.R` | Generates tables and figures summarizing MPM fusion validation results |
+| `04_inf_fusion.R` | Mirrors `02_mpm_fusion.R` for infrastructure indicators (electricity, water, sanitation); includes validation metrics |
+| `05_inf_fusion_results.R` | Generates tables and figures summarizing infrastructure fusion validation results |
+| `06_compare_rank_correlations.R` | Generates table comparing MPM rank correlations using fusion method vs monetary poverty |
+| `07_validation_data.R` | Generates table summarizing validation data (surveys) by region and decade |
+
 ### `code/functions/` — Pure function definitions
 
 | File | Purpose |
@@ -117,18 +128,6 @@ The provided code reproduces all tables and figures in the paper containing resu
 | `run_fusion_scenarios.R` | Orchestrates the loop over fusion scenarios and bias factors |
 | `run_validation.R` | Shared validation pipeline: computes level and national metrics, saves outputs |
 | `results_tables.R` | Shared Excel workbook generation (`create_summary_workbook`, `create_extended_workbook`) |
-
-### `code/analysis/` — Pipeline scripts (executed in order by `main.R`)
-
-| File | Purpose |
-|---|---|
-| `01_prep_validation_data.R` | Loads GMD survey data, merges population data, computes weights |
-| `02_mpm_fusion.R` | Runs MPM fusion across 7 scenarios × 11 bias factors; saves `fused_mpm.parquet`; computes MAE, MAPE, RMSE, and coverage metrics |
-| `03_mpm_fusion_results.R` | Generates tables and figures summarizing MPM fusion validation results |
-| `04_inf_fusion.R` | Mirrors `02_mpm_fusion.R` for infrastructure indicators (electricity, water, sanitation); includes validation metrics |
-| `05_inf_fusion_results.R` | Generates tables and figures summarizing infrastructure fusion validation results |
-| `06_compare_rank_correlations.R` | Generates table comparing MPM rank correlations using fusion method vs monetary poverty |
-| `07_validation_data.R` | Generates table summarizing validation data (surveys) by region and decade |
 
 ---
 
