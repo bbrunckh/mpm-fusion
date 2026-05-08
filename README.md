@@ -122,7 +122,7 @@ The provided code reproduces all tables and figures in the paper containing resu
 
 | File | Purpose |
 |---|---|
-| `01_prep_validation_data.R` | Loads GMD survey data, merges WDI population data, computes weights |
+| `01_prep_validation_data.R` | Loads GMD survey data, merges population data, computes weights |
 | `02_mpm_fusion.R` | Runs MPM fusion across 7 scenarios × 11 bias factors; saves `fused_mpm.parquet`; computes MAE, MAPE, RMSE, and coverage metrics |
 | `03_mpm_fusion_results.R` | Generates tables and figures summarizing MPM fusion validation results |
 | `04_inf_fusion.R` | Mirrors `02_mpm_fusion.R` for infrastructure indicators (electricity, water, sanitation); includes validation metrics |
