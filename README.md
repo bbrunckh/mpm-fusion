@@ -1,8 +1,8 @@
-# Reproducibility Package
+# Fusing data sources to measure multidimensional poverty
 
 ## Overview
 
-This package contains the code and data to reproduce the results in **Fusing data sources to measure multidimensional poverty** by Ben J. Brunckhorst, Minh C. Nguyen, Nishant Yonzan, Hai-Anh Dang & Christoph Lakner. 
+This repository contains code to reproduce the results in **Fusing data sources to measure multidimensional poverty** by Ben J. Brunckhorst, Minh C. Nguyen, Nishant Yonzan, Hai-Anh Dang & Christoph Lakner. 
 
 To replicate, follow the [Instructions for Replicators](#instructions-for-replicators) below.
 
