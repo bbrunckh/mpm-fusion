@@ -35,3 +35,7 @@ CLAUDE.md
 
 # Tests
 code/tests/
+code/stata/
+
+# Data prep
+prep/
