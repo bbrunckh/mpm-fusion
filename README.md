@@ -14,19 +14,18 @@ Some data cannot be made publicly available.
 ### Data Sources
 
 - **Filename:** `Survey_mpm_groups_true.dta`
-  - **Source:** Produced by the authors for this project from the World Bank Global Monitoring Database
-  - **Access date:** 27 August 2025
-  - **Citation:** World Bank (2025). Global Monitoring Database.
-  - **License:** Restricted access
-  - **Access instructions:** The dataset is published on the World Bank Development Data Hub (DDH) and available by request due to licensing restrictions. The Stata code used to derive the data from the raw sources is included with the data set.
+  - **Source:** Produced by the authors for this project from the World Bank Global Monitoring Database (GMD). 
+  - **URL:** https://datacatalog.worldbank.org/int/data/dataset/0067094/multidimensional_poverty_group_statistics (restricted access)
+  - **Production date:** 27 August 2025
+  - **Access instructions:** The dataset is archived in the World Bank Development Data Hub (DDH) to facilitate reproducibility and available by request due to licensing restrictions. The Stata code used to generate the data is also archived.
 
-- **Filename:** population data (accessed programmatically using the `pipr` R package)
+- **Name:** Population data - accessed programmatically using the `pipr` R package (no data file included)
   - **Source:** World Bank, Poverty and Inequality Platform
   - **URL:** https://pip.worldbank.org, https://github.com/worldbank/pipr
   - **Access date:** 7 May 2026
   - **Citation:** World Bank (2026). Poverty and Inequality Platform (version 20260324_2021_01_02_PROD) [data set]. pip.worldbank.org. Accessed on 2026-05-07.
   - **License:** Creative Commons Attribution 4.0 International license (CC-BY 4.0)
-  - **Access instructions:** The data is accessed programmatically using the `pipr` R package in the analysis code.
+  - **Access instructions:** The data is accessed programmatically using the `pipr` R package from the analysis code. No data file is necessary.
 
 The authors of the manuscript have legitimate access to and permission to use the data used in this manuscript.
 
@@ -37,14 +36,14 @@ The authors of the manuscript have legitimate access to and permission to use th
 1. Add the input data file `Survey_mpm_groups_true.dta` to the `data/` folder if it is not included in the package.
 
 2. Run `main.R`
-  - `renv::restore()` will install all required R packages at the exact versions used. 
+  - `renv::restore()` will install all required R packages at the exact versions used.
   - If needed, update the `root` path to the package directory (by default it uses `here::here()` which auto-detects the project root).
 
 ---
 
 ## List of Exhibits
 
-The provided code reproduces all tables and figures in the paper containing results from the analysis. In order of appearance:
+The code reproduces all tables and figures in the paper presenting results from the analysis. In order of appearance:
 
 | Exhibit | Output | Script | 
 |---|---|---|
