@@ -32,7 +32,7 @@ level_list <- c("National", "Rural-Urban", "Quintile", "Subnational")
 mpm_list   <- c("MPM", "MPM-AF", "At least 1", "At least 3")
 
 mpm_val_national[, scenario   := factor(scenario,   levels = s_list)]
-mpm_val_national[, est_list   := factor(target,     levels = est_list)]
+mpm_val_national[, target     := factor(target,     levels = est_list)]
 mpm_val_national[, data_level := factor(data_level, levels = level_list)]
 mpm_val_national[, mpm        := factor(mpm,        levels = mpm_list)]
 
