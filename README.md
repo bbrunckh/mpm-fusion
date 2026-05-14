@@ -92,7 +92,7 @@ The code reproduces all tables and figures in the paper presenting results from 
 
 ### Runtime
 
-- 245 minutes (macOS 26.4.1, M2 chip, 16GB memory)
+- 141 minutes (macOS 26.4.1, M2 chip, 16GB memory)
 
 ### Storage
 

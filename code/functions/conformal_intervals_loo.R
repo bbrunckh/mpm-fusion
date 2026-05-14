@@ -12,7 +12,7 @@
 #' @param lower_col_name Column name with lower bound (default = "lower_bound")
 #' @param upper_col_name Column name with upper bound (default = "upper_bound")
 #' @param feature_cols Character vector of feature columns for localization (default = NULL)
-#' @param k Number of neighbors (default = sqrt(n) for local, n for global)
+#' @param k Number of nearest neighbors for local intervals (default = ceiling(sqrt(n_val)))
 #' @param distance_metric "euclidean", "manhattan", or "mahalanobis" (default = "euclidean")
 #' @param scale_features Scale features before distance computation (default = TRUE)
 #' @param group_vars Character vector of grouping columns (default = NULL)
@@ -22,8 +22,8 @@
 #' @return data_dt with pred_p{percentile}_global/local, n_obs_global/local
 #'
 #' @note Local intervals use dbscan::kNN for Euclidean and Mahalanobis (via Cholesky
-#'   pre-whitening). Manhattan distance uses the same Euclidean kd-tree as an
-#'   approximation; exact L1 KNN is not efficiently supported at large scale.
+#'   pre-whitening). For single-feature cases, a sorted binary-search path replaces
+#'   kd-tree construction. Manhattan distance uses the Euclidean path as an approximation.
 #'
 conformal_intervals_loo <- function(data_dt,
                                     alpha = 0.05,
@@ -102,20 +102,11 @@ conformal_intervals_loo <- function(data_dt,
 
   probs <- c(alpha / 2, 0.5, 1 - alpha / 2)
 
-  # Accept z/w vectors directly — avoids copying the full data.table per LOO iteration
-  compute_global <- function(z, w) {
-    qs <- get_quantiles(z, w, probs)
-    list(z_lower = qs[1], z_p50 = qs[2], z_upper = qs[3], n = length(z))
-  }
-
-  # Precompute leave_out vector once to avoid repeated column access in loops
   if (!is.null(leave_out)) {
-    leave_out_vec  <- data_dt[[leave_out]]
-    leave_out_vals <- unique(leave_out_vec)
+    leave_out_vals <- unique(data_dt[[leave_out]])
     message(sprintf("Computing LOO intervals for %d unique %s values",
                     length(leave_out_vals), leave_out))
   } else {
-    leave_out_vec  <- NULL
     leave_out_vals <- NA
     message("No leave_out specified - using all data for each prediction")
   }
@@ -123,50 +114,55 @@ conformal_intervals_loo <- function(data_dt,
   message(sprintf("Computing global %.1f%% conformal intervals (n=%d observations)",
                   (1 - alpha) * 100, nrow(data_dt)))
 
-  # Precompute z/w vectors once to avoid repeated $-access inside loops
-  z_vec <- data_dt$z
-  w_vec <- data_dt$w
+  # Tag rows with their position; pre-split by group_vars once so each group
+  # iteration works on a small slice rather than scanning all n_total rows per group.
+  data_dt[, .row_idx := .I]
+  grp_list <- if (!is.null(group_vars)) split(data_dt, by = group_vars, keep.by = TRUE) else list(data_dt)
 
   data_dt[, `:=`(z_lower_global = NA_real_, z_p50_global = NA_real_,
                  z_upper_global = NA_real_, n_global     = NA_integer_)]
 
   # === GLOBAL INTERVALS ===
-  if (!is.null(group_vars)) {
-    groups <- unique(data_dt[, ..group_vars])
-    for (i in seq_len(nrow(groups))) {
-      grp     <- groups[i]
-      grp_idx <- rep(TRUE, nrow(data_dt))
-      for (gv in group_vars) grp_idx <- grp_idx & (data_dt[[gv]] == grp[[gv]])
+  for (grp in grp_list) {
+    if (nrow(grp) == 0) next
+    z_g  <- grp$z
+    w_g  <- grp$w
+    rows <- grp$.row_idx
 
-      if (!is.null(leave_out)) {
-        for (loo_val in leave_out_vals) {
-          test_idx <- grp_idx & (leave_out_vec == loo_val)
-          val_idx  <- grp_idx & (leave_out_vec != loo_val)
-          if (sum(test_idx) == 0 || sum(val_idx) == 0) next
-          qs <- compute_global(z_vec[val_idx], w_vec[val_idx])
-          data_dt[test_idx, `:=`(z_lower_global = qs$z_lower, z_p50_global = qs$z_p50,
-                                 z_upper_global = qs$z_upper, n_global      = qs$n)]
-        }
-      } else {
-        qs <- compute_global(z_vec[grp_idx], w_vec[grp_idx])
-        data_dt[grp_idx, `:=`(z_lower_global = qs$z_lower, z_p50_global = qs$z_p50,
-                              z_upper_global = qs$z_upper, n_global      = qs$n)]
-      }
-    }
-  } else {
     if (!is.null(leave_out)) {
+      loo_g <- grp[[leave_out]]
+
+      # Sort once per group. Each LOO just filters the pre-sorted vectors —
+      # no re-sort needed since removing elements from a sorted array stays sorted.
+      fin   <- is.finite(z_g) & is.finite(w_g) & w_g > 0
+      o     <- order(z_g[fin])
+      z_s   <- z_g[fin][o]
+      w_s   <- w_g[fin][o]
+      loo_s <- loo_g[fin][o]
+
       for (loo_val in leave_out_vals) {
-        test_idx <- leave_out_vec == loo_val
-        val_idx  <- leave_out_vec != loo_val
-        if (sum(test_idx) == 0 || sum(val_idx) == 0) next
-        qs <- compute_global(z_vec[val_idx], w_vec[val_idx])
-        data_dt[test_idx, `:=`(z_lower_global = qs$z_lower, z_p50_global = qs$z_p50,
-                               z_upper_global = qs$z_upper, n_global      = qs$n)]
+        test_mask <- loo_g == loo_val
+        if (!any(test_mask)) next
+        val_mask  <- loo_s != loo_val
+        if (!any(val_mask)) next
+
+        w_v  <- w_s[val_mask]
+        w_v  <- w_v / sum(w_v)
+        cumw <- cumsum(w_v)
+        z_v  <- z_s[val_mask]
+        qs   <- vapply(probs, function(p) z_v[which(cumw >= p)[1L]], numeric(1))
+
+        data_dt[rows[test_mask], `:=`(
+          z_lower_global = qs[1], z_p50_global = qs[2],
+          z_upper_global = qs[3], n_global     = sum(loo_g != loo_val)
+        )]
       }
     } else {
-      qs <- compute_global(z_vec, w_vec)
-      data_dt[, `:=`(z_lower_global = qs$z_lower, z_p50_global = qs$z_p50,
-                     z_upper_global = qs$z_upper, n_global      = qs$n)]
+      qs <- get_quantiles(z_g, w_g, probs)
+      data_dt[rows, `:=`(
+        z_lower_global = qs[1], z_p50_global = qs[2],
+        z_upper_global = qs[3], n_global     = length(z_g)
+      )]
     }
   }
 
@@ -176,12 +172,8 @@ conformal_intervals_loo <- function(data_dt,
     message(sprintf("Computing local %.1f%% conformal intervals using features",
                     (1 - alpha) * 100))
 
-    X_all <- as.matrix(data_dt[, ..feature_cols])
-    storage.mode(X_all) <- "double"
-
     data_dt[, `:=`(z_lower_local = NA_real_, z_p50_local = NA_real_,
                    z_upper_local = NA_real_, n_local     = NA_integer_)]
-    data_dt[, .idx := .I]
 
     # Scale features and optionally pre-whiten for Mahalanobis.
     # Mahalanobis = Euclidean after X %*% t(chol(solve(cov(X_val)))).
@@ -206,106 +198,100 @@ conformal_intervals_loo <- function(data_dt,
       list(X_val = unname(X_val), X_test = unname(X_test))
     }
 
-    # Run kNN via dbscan for all test points at once; bulk-assign results.
-    # sort = FALSE: skip distance sorting since we only need indices for quantiles.
+    # 1D fast path uses sort + findInterval instead of building a kd-tree.
+    # Falls back to dbscan::kNN for multi-feature cases.
     run_local_knn <- function(X_val, X_test, z_val, w_val, k_use) {
-      nn <- dbscan::kNN(x = X_val, query = X_test, k = k_use, sort = FALSE)
+      n_val <- nrow(X_val)
 
-      if (is.null(equal_weights)) {
-        # Bulk-index all neighbour z-values into an n_test × k matrix, then quantile row-wise
-        z_nn    <- matrix(z_val[nn$id], nrow = nrow(nn$id))
-        results <- t(apply(z_nn, 1, function(z_row) {
-          get_quantiles_uniform(z_row, probs)
-        }))
+      if (ncol(X_val) == 1L) {
+        x_v   <- X_val[, 1L]
+        x_t   <- X_test[, 1L]
+        o_val <- order(x_v)
+        x_v_s <- x_v[o_val]
+        z_v_s <- z_val[o_val]
+        w_v_s <- w_val[o_val]
+
+        # For each test point, the k nearest in 1D are near the insertion position.
+        # Window [pos - k, pos + k + 1] is always wide enough to contain k neighbors.
+        nn_ids <- t(vapply(x_t, function(xi) {
+          pos   <- findInterval(xi, x_v_s)
+          lo    <- max(1L, pos - k_use)
+          hi    <- min(n_val, pos + k_use + 1L)
+          cands <- seq.int(lo, hi)
+          dists <- abs(x_v_s[cands] - xi)
+          cands[order(dists, method = "radix")[seq_len(min(k_use, length(cands)))]]
+        }, integer(k_use)))
+
+        if (is.null(equal_weights)) {
+          z_nn    <- matrix(z_v_s[nn_ids], nrow = nrow(nn_ids))
+          results <- t(apply(z_nn, 1, function(z_row) get_quantiles_uniform(z_row, probs)))
+        } else {
+          results <- t(vapply(seq_len(nrow(nn_ids)), function(j) {
+            idx <- nn_ids[j, ]
+            get_quantiles(z_v_s[idx], w_v_s[idx], probs)
+          }, numeric(3)))
+        }
       } else {
-        results <- t(vapply(seq_len(nrow(nn$id)), function(j) {
-          idx <- nn$id[j, ]
-          get_quantiles(z_val[idx], w_val[idx], probs)
-        }, numeric(3)))
+        # Multi-feature: use dbscan kNN (kd-tree).
+        # sort = FALSE: skip distance sorting since we only need indices for quantiles.
+        nn <- dbscan::kNN(x = X_val, query = X_test, k = k_use, sort = FALSE)
+
+        if (is.null(equal_weights)) {
+          z_nn    <- matrix(z_val[nn$id], nrow = nrow(nn$id))
+          results <- t(apply(z_nn, 1, function(z_row) get_quantiles_uniform(z_row, probs)))
+        } else {
+          results <- t(vapply(seq_len(nrow(nn$id)), function(j) {
+            idx <- nn$id[j, ]
+            get_quantiles(z_val[idx], w_val[idx], probs)
+          }, numeric(3)))
+        }
       }
 
       list(z_lower = results[, 1], z_p50 = results[, 2], z_upper = results[, 3], n = k_use)
     }
 
-    if (!is.null(group_vars)) {
-      groups <- unique(data_dt[, ..group_vars])
-      for (i in seq_len(nrow(groups))) {
-        grp     <- groups[i]
-        grp_idx <- rep(TRUE, nrow(data_dt))
-        for (gv in group_vars) grp_idx <- grp_idx & (data_dt[[gv]] == grp[[gv]])
-        grp_data <- data_dt[grp_idx]
-        if (nrow(grp_data) == 0) next
+    for (grp in grp_list) {
+      if (nrow(grp) == 0) next
+      rows <- grp$.row_idx
 
-        if (!is.null(leave_out)) {
-          for (loo_val in leave_out_vals) {
-            test_idx <- grp_data[[leave_out]] == loo_val
-            val_idx  <- grp_data[[leave_out]] != loo_val
-            if (sum(test_idx) == 0 || sum(val_idx) == 0) next
+      # Extract feature matrix directly from the group slice — no global X_all needed
+      X_g <- as.matrix(grp[, ..feature_cols])
+      storage.mode(X_g) <- "double"
 
-            mats  <- prep_knn_matrices(
-              X_all[grp_data$.idx[val_idx],  , drop = FALSE],
-              X_all[grp_data$.idx[test_idx], , drop = FALSE],
-              distance_metric
-            )
-            k_use <- if (is.null(k)) ceiling(sqrt(sum(val_idx))) else min(k, sum(val_idx))
-            res   <- run_local_knn(mats$X_val, mats$X_test,
-                                   grp_data$z[val_idx], grp_data$w[val_idx], k_use)
-
-            data_dt[grp_data$.idx[test_idx], `:=`(
-              z_lower_local = res$z_lower, z_p50_local = res$z_p50,
-              z_upper_local = res$z_upper, n_local     = res$n
-            )]
-          }
-        } else {
-          mats  <- prep_knn_matrices(
-            X_all[grp_data$.idx, , drop = FALSE],
-            X_all[grp_data$.idx, , drop = FALSE],
-            distance_metric
-          )
-          k_use <- if (is.null(k)) ceiling(sqrt(nrow(grp_data))) else min(k, nrow(grp_data))
-          res   <- run_local_knn(mats$X_val, mats$X_test,
-                                 grp_data$z, grp_data$w, k_use)
-
-          data_dt[grp_data$.idx, `:=`(
-            z_lower_local = res$z_lower, z_p50_local = res$z_p50,
-            z_upper_local = res$z_upper, n_local     = res$n
-          )]
-        }
-      }
-    } else {
       if (!is.null(leave_out)) {
+        loo_g <- grp[[leave_out]]
+
         for (loo_val in leave_out_vals) {
-          test_idx <- leave_out_vec == loo_val
-          val_idx  <- leave_out_vec != loo_val
-          if (sum(test_idx) == 0 || sum(val_idx) == 0) next
+          test_mask <- loo_g == loo_val
+          val_mask  <- loo_g != loo_val
+          if (!any(test_mask) || !any(val_mask)) next
 
           mats  <- prep_knn_matrices(
-            X_all[val_idx,  , drop = FALSE],
-            X_all[test_idx, , drop = FALSE],
+            X_g[val_mask,  , drop = FALSE],
+            X_g[test_mask, , drop = FALSE],
             distance_metric
           )
-          k_use <- if (is.null(k)) ceiling(sqrt(sum(val_idx))) else min(k, sum(val_idx))
+          k_use <- if (is.null(k)) ceiling(sqrt(sum(val_mask))) else min(k, sum(val_mask))
           res   <- run_local_knn(mats$X_val, mats$X_test,
-                                 z_vec[val_idx], w_vec[val_idx], k_use)
+                                 grp$z[val_mask], grp$w[val_mask], k_use)
 
-          data_dt[which(test_idx), `:=`(
+          data_dt[rows[test_mask], `:=`(
             z_lower_local = res$z_lower, z_p50_local = res$z_p50,
             z_upper_local = res$z_upper, n_local     = res$n
           )]
         }
       } else {
-        mats  <- prep_knn_matrices(X_all, X_all, distance_metric)
-        k_use <- if (is.null(k)) ceiling(sqrt(nrow(data_dt))) else min(k, nrow(data_dt))
-        res   <- run_local_knn(mats$X_val, mats$X_test, z_vec, w_vec, k_use)
+        mats  <- prep_knn_matrices(X_g, X_g, distance_metric)
+        k_use <- if (is.null(k)) ceiling(sqrt(nrow(grp))) else min(k, nrow(grp))
+        res   <- run_local_knn(mats$X_val, mats$X_test, grp$z, grp$w, k_use)
 
-        data_dt[, `:=`(
+        data_dt[rows, `:=`(
           z_lower_local = res$z_lower, z_p50_local = res$z_p50,
           z_upper_local = res$z_upper, n_local     = res$n
         )]
       }
     }
 
-    data_dt[, .idx := NULL]
     avg_n <- round(mean(data_dt$n_local, na.rm = TRUE))
     message(sprintf("Computed localized %.1f%% intervals using k=%d neighbors (avg)",
                     (1 - alpha) * 100, avg_n))
@@ -345,7 +331,7 @@ conformal_intervals_loo <- function(data_dt,
   }
 
   cols_to_remove <- c("z_lower_global", "z_p50_global", "z_upper_global", "n_global",
-                      "lw", "uw", "err", "z", "w")
+                      "lw", "uw", "err", "z", "w", ".row_idx")
   if (use_local) cols_to_remove <- c(cols_to_remove, "z_lower_local", "z_p50_local", "z_upper_local", "n_local")
   data_dt[, (cols_to_remove) := NULL]
 
