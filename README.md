@@ -22,8 +22,8 @@ Some data cannot be made publicly available.
 - **Name:** Population data - accessed programmatically using the `pipr` R package (no data file included)
   - **Source:** World Bank, Poverty and Inequality Platform
   - **URL:** https://pip.worldbank.org, https://github.com/worldbank/pipr
-  - **Access date:** 7 May 2026
-  - **Citation:** World Bank (2026). Poverty and Inequality Platform (version 20260324_2021_01_02_PROD) [data set]. pip.worldbank.org. Accessed on 2026-05-07.
+  - **Access date:** 13 May 2026
+  - **Citation:** World Bank (2026). Poverty and Inequality Platform (version 20260324_2021_01_02_PROD) [data set]. pip.worldbank.org. Accessed on 2026-05-13.
   - **License:** Creative Commons Attribution 4.0 International license (CC-BY 4.0)
   - **Access instructions:** The data is accessed programmatically using the `pipr` R package from the analysis code. No data file is necessary.
 
